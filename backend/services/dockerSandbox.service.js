@@ -679,8 +679,10 @@ export async function startSandbox(project, customEnvVars = []) {
   const gatewayPort = await findAvailablePort(3001, 3100);
   const targetPort = await findAvailablePort(gatewayPort + 10, 3200);
   const backendPort = await findAvailablePort(targetPort + 10, 3300);
-  const baseUrl = process.env.DOCKER_SANDBOX_BASE_URL || 'http://localhost';
-  const liveUrl = `${baseUrl}:${gatewayPort}`;
+  const proxyUrl = `/api/projects/${projectId}/sandbox/proxy`;
+  const liveUrl = process.env.DOCKER_SANDBOX_BASE_URL
+    ? `${process.env.DOCKER_SANDBOX_BASE_URL}:${gatewayPort}`
+    : proxyUrl;
   const maxLifespanMs = Number(process.env.DOCKER_SANDBOX_MAX_LIFESPAN_MS) || 600000;
 
   const mergedEnvMap = new Map();
@@ -1061,3 +1063,64 @@ function formatSandboxResponse(sandbox) {
     logs: sandbox.logs,
   };
 }
+
+/**
+ * HTTP Proxy handler for sandbox container live viewport
+ */
+export async function handleSandboxProxyRequest(projectId, project, req, res) {
+  let sandboxRecord = activeSandboxes.get(projectId);
+
+  if (!sandboxRecord) {
+    if (!project) {
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end('<h3>Project Not Found</h3>');
+    }
+    await startSandbox(project);
+    sandboxRecord = activeSandboxes.get(projectId);
+  }
+
+  if (!sandboxRecord) {
+    res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end('<h3>Unable to initialize sandbox environment</h3>');
+  }
+
+  res.removeHeader('X-Frame-Options');
+  res.removeHeader('Content-Security-Policy');
+
+  if (sandboxRecord.port) {
+    const rawPath = req.url.replace(new RegExp(`^/api/projects/${projectId}/sandbox/proxy`), '') || '/';
+    const proxyPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    const proxyOptions = {
+      hostname: '127.0.0.1',
+      port: sandboxRecord.port,
+      path: proxyPath,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: `127.0.0.1:${sandboxRecord.port}`,
+      },
+      timeout: 5000,
+    };
+
+    const proxyReq = http.request(proxyOptions, (proxyRes) => {
+      const responseHeaders = { ...proxyRes.headers };
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['content-security-policy'];
+      delete responseHeaders['frame-options'];
+
+      res.writeHead(proxyRes.statusCode || 200, responseHeaders);
+      proxyRes.pipe(res, { end: true });
+    });
+
+    proxyReq.on('error', () => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(renderDiagnosticTerminalHtml(sandboxRecord));
+    });
+
+    return req.pipe(proxyReq, { end: true });
+  }
+
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  return res.end(renderDiagnosticTerminalHtml(sandboxRecord));
+}
+

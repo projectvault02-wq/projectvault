@@ -986,8 +986,9 @@ const DashboardViewProject = () => {
                 <div className="bg-slate-900 px-3 py-1 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 flex items-center gap-1.5 ml-2 truncate">
                   <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span className="truncate">
-                    {sandboxLiveUrl || project.liveUrl || (sandboxPort ? `http://localhost:${sandboxPort}` : 'http://localhost:3000 (Docker Sandbox Offline)')}
+                    {sandboxLiveUrl || project.liveUrl || `/api/projects/${id}/sandbox/proxy`}
                   </span>
+
                 </div>
                 {sandboxMode && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 shrink-0 hidden md:inline-block">
@@ -1024,11 +1025,12 @@ const DashboardViewProject = () => {
               {activeIframeTab === 'viewport' ? (
                 sandboxStatus === 'ONLINE' ? (
                   <iframe
-                    src={sandboxLiveUrl || project.liveUrl || `http://localhost:${sandboxPort || 3000}`}
+                    src={sandboxLiveUrl || `/api/projects/${id}/sandbox/proxy`}
                     title={project.title}
                     className="w-full h-full border-0"
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                   />
+
                 ) : sandboxStatus === 'STARTING' ? (
                   <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-slate-950 text-white space-y-4">
                     <div className="w-16 h-16 rounded-3xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-lg animate-spin">

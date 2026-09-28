@@ -5,7 +5,9 @@ import {
   getSandboxStatus,
   getSandboxLogs,
   isDockerAvailable,
+  handleSandboxProxyRequest,
 } from '../services/dockerSandbox.service.js';
+
 
 /**
  * @desc    Start or Restart a Docker Sandbox for a project
@@ -123,3 +125,20 @@ export const getSandboxEngineInfo = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Proxy Live Sandbox Container Viewport (HTTPS safe)
+ * @route   GET /api/projects/:id/sandbox/proxy
+ * @access  Public
+ */
+export const proxyContainerView = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await Project.findById(id);
+    await handleSandboxProxyRequest(id, project, req, res);
+  } catch (error) {
+    console.error('Sandbox Proxy Viewport Error:', error);
+    res.status(500).send(`<h3>Sandbox Proxy Error: ${error.message}</h3>`);
+  }
+};
+

@@ -1,0 +1,24 @@
+# Node modules & dependencies
+node_modules/
+.pnpm-store/
+
+# Build and dist outputs
+dist/
+build/
+*.log
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Uploaded artifacts
+backend/uploads/executables/*
+!backend/uploads/executables/.gitkeep
+backend/sandboxes/

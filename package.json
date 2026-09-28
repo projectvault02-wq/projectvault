@@ -4,7 +4,7 @@
   "description": "Project Vault v2 Full-Stack Platform",
   "private": true,
   "scripts": {
-    "install-deps": "cd backend && npm install && cd ../frontend && npm install",
+    "install-deps": "cd backend && npm install --include=dev && cd ../frontend && npm install --include=dev",
     "build": "npm run install-deps && cd frontend && npm run build",
     "start": "cd backend && npm start",
     "dev": "node --watch backend/server.js"
